@@ -1,4 +1,58 @@
 #!/usr/bin/make -f
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+# `CMAKE_ARGS` is for passing cmake arguments to setup.py
+# We will also pass this to the direct cmake build.
+export CMAKE_ARGS              = -DONNX_USE_PROTOBUF_SHARED_LIBS=ON \
+                                 -DBUILD_SHARED_LIBS=ON \
+                                 -DONNX_BUILD_TESTS=OFF \
+                                 -DCMAKE_BUILD_TYPE=Release \
+                                 -DBUILD_ONNX_PYTHON=ON \
+                                 -Dprotobuf_BUILD_SHARED_LIBS=OFF \
+                                 -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+                                 -Dprotobuf_BUILD_TESTS=OFF \
+                                 -DCMAKE_VERBOSE_MAKEFILE=ON
 
 %:
-	dh $@
+	dh $@ -Spybuild --with python3
+
+override_dh_auto_configure:
+	# XXX: the find | sed command is written in fix-shebang.patch
+	#find . -type f -name '*.py' -exec \
+    #    sed -i -e 's@#!/usr/bin/env python@#!/usr/bin/python3@' '{}' +
+	dh_auto_configure -Scmake -- $(CMAKE_ARGS)
+	dh_auto_configure -Spybuild
+
+override_dh_auto_build:
+	: # so things won't be built again while installing
+
+override_dh_auto_test:
+	:
+
+override_dh_auto_install:
+	dh_auto_install -Scmake
+	dh_auto_install -Spybuild
+	# Remove duplicatd test data from include directory
+	-$(RM) -rf debian/tmp/usr/include/onnx/backend/test/data
+	# Use the test data installed in python package as the main copy
+	mkdir -v -p debian/libonnx-testdata/usr/share/libonnx-testdata/
+	mv debian/tmp/usr/lib/$(shell py3versions -d)/dist-packages/onnx/backend/test/data \
+	   debian/libonnx-testdata/usr/share/libonnx-testdata/
+	-$(RM) -rf debian/tmp/usr/lib/python3*/dist-packages/onnx/backend/test/data
+	# install the python package
+	mkdir -p debian/python3-onnx/usr/lib/python3
+	for py3 in $(shell py3versions -s); do \
+		cp -av debian/tmp/usr/lib/$${py3}/dist-packages debian/python3-onnx/usr/lib/python3/; \
+		rm -rf debian/tmp/usr/lib/$${py3}/dist-packages; done
+
+override_dh_missing:
+	dh_missing --fail-missing
+
+override_dh_auto_clean:
+	dh_auto_clean -Scmake
+	dh_auto_clean -Spybuild
+	-$(RM) -rf .setuptools-cmake-build
+	# XXX: those are auto generated files.
+	-$(RM) onnx/onnx_data_pb.py onnx/onnx_data_pb2.py onnx/onnx_data_pb2.pyi \
+		onnx/onnx_ml_pb2.py onnx/onnx_ml_pb2.pyi onnx/onnx_operators_ml_pb2.py \
+		onnx/onnx_operators_ml_pb2.pyi onnx/onnx_operators_pb.py onnx/onnx_pb.py \
+		onnx/version.py
