@@ -44,11 +44,8 @@ Description: Open Neural Network Exchange (ONNX) (Python)
  .
  This package contains the Python interface.
 
-Package: libonnx1t64
+Package: libonnx1
 Section: libs
-Provides: ${t64:Provides}
-Replaces: libonnx1
-Breaks: libonnx1 (<< ${source:Version})
 Architecture: any
 Multi-Arch: same
 Depends: ${misc:Depends}, ${shlibs:Depends}
@@ -71,7 +68,7 @@ Package: libonnx-dev
 Section: libdevel
 Architecture: any
 Multi-Arch: same
-Depends: libonnx1t64 (= ${binary:Version}), ${misc:Depends}
+Depends: libonnx1 (= ${binary:Version}), ${misc:Depends}
 Description: Open Neural Network Exchange (ONNX) (dev)
  Open Neural Network Exchange (ONNX) is the first step toward an open ecosystem
  that empowers AI developers to choose the right tools as their project evolves.
